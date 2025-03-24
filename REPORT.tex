@@ -1,0 +1,98 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{booktabs}
+\usepackage[margin=0.8in, top=0.8in, bottom=0.8in]{geometry}
+\title{COMP631 Task2:Search Agent Implementation and Evaluation Report}
+\author{FeiTeng (ft28),Lingyi Xu (lx28)}
+
+\begin{document}
+
+
+\maketitle
+
+\section{Introduction}
+
+The Search Agent is designed to enhance the retrieval capabilities of a Retrieval-Augmented Generation (RAG) system by effectively matching user queries with the most relevant documents from a predefined corpus. In this task, we leveraged dense embedding-based retrieval, specifically utilizing the Stella embedding model (\texttt{stella\_en\_400M\_v5}), to significantly improve retrieval accuracy compared to traditional keyword-based methods.
+
+\section{Methodology}
+
+\subsection{Corpus Preparation}
+
+The corpus used in this task comprises multiple documents stored across 13 CSV files. Each entry includes an \texttt{id}, \texttt{url}, and textual \texttt{content}. To align with the retrieval model's requirements, the corpus was processed into a structured JSON format (\texttt{corpus\_dict.json}), containing document IDs, titles (extracted from URLs), and the first sentences from each text. This structured corpus facilitated efficient indexing and retrieval.
+
+Given the limitations of the Colab environment (memory and computational constraints), the corpus was too large to encode repeatedly. To overcome this, we employed vector persistence by precomputing the embeddings and storing them in an index file (\texttt{precomputed\_index.pt}). After the initial construction, subsequent retrieval tasks could be executed offline, significantly enhancing performance.
+
+\subsection{Embedding Model Selection and Integration}
+
+To achieve high-quality semantic retrieval, we selected the Stella embedding model (\texttt{stella\_en\_400M\_v5}), known for its efficiency and semantic richness. Due to compatibility considerations on macOS and potential issues with the xFormers library, the Stella model was initialized with attention implementation set to \texttt{"eager"} to avoid external dependency complications.
+
+The embeddings were generated using PyTorch and Hugging Face's Transformers library, ensuring efficient and robust performance on available hardware (e.g., macOS with MPS backend).
+
+\subsection{Dense Retrieval Strategy}
+
+The retrieval process leveraged cosine similarity computations between query embeddings and corpus embeddings. Embeddings for both queries and corpus texts were generated via the Stella embedding model. Cosine similarity scores were then computed to rank documents, and a heap-based data structure efficiently selected the top-k relevant documents for each query.
+
+The use of precomputed embeddings allowed retrieval tasks to be completed rapidly, typically within 3 seconds.
+
+\subsection{Result Visualization}
+
+For improved interpretability and quick display of retrieval results, we offline-loaded a separate CSV file (\texttt{ids\_titles\_firstsentences.csv}) containing document IDs, titles, and previews (first sentences). This approach allowed the Search Agent to quickly present a clear and human-readable summary of retrieved documents.
+
+\section{Implementation Highlights}
+
+\subsection{Embedding Generation}
+
+Embedding vectors for documents and queries were computed by pooling token embeddings obtained from the Stella model:
+\begin{itemize}
+    \item Tokenization and encoding performed by Stella tokenizer.
+    \item Mean pooling strategy applied over the token embeddings, considering the attention mask for accurate representation.
+\end{itemize}
+
+\subsection{Retrieval Algorithm}
+
+The retrieval algorithm employed cosine similarity combined with a min-heap data structure to efficiently identify and rank relevant documents:
+\begin{itemize}
+    \item Cosine similarity provided robust semantic comparisons.
+    \item The heap data structure efficiently maintained and sorted the top-k most relevant documents for queries.
+\end{itemize}
+
+\subsection{Offline Vector Persistence}
+
+Given the computational constraints, embeddings were calculated once and stored persistently. This ensured fast subsequent retrievals without repeated encoding processes, making the retrieval process feasible even under limited computational resources.
+
+\section{Experimental Results}
+
+To evaluate the retrieval performance, several queries were tested. For example:
+
+\textbf{Query:} "What is a traditional breakfast in Mexico City?"
+
+The retrieval model successfully identified semantically relevant documents, showing significantly higher relevance compared to the traditional bag-of-words method, as indicated by improved cosine similarity scores:
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{lcll}
+    \toprule
+    Rank & Similarity & Document Title & First Sentence (Preview) \\
+    \midrule
+    1 & 0.8425 & Mexico City & Mexico City offers many delicious traditional breakfasts...... \\
+    2 & 0.8031 & Mexican cuisine & Traditional Mexican breakfasts include hearty dishes like...... \\
+    3 & 0.7618 & Street Food in Mexico & Mexico City is famous for its street food, offering popular...... \\
+    \bottomrule
+    \end{tabular}
+    \caption{Example Retrieval Results}
+\end{table}
+
+Retrieval results clearly demonstrate the effectiveness of dense retrieval methods, providing highly relevant documents for user queries within a short time frame \textbf{(about 3 seconds)}.
+
+\section{Conclusion}
+
+The dense embedding-based retrieval approach, powered by the Stella embedding model, significantly enhanced the Search Agent's capability to retrieve semantically relevant documents from the corpus. Compared to simpler bag-of-words retrieval methods, our model provided results with improved semantic coherence and higher relevance scores.
+
+The strategy of vector persistence enabled fast, offline retrieval operations even under limited resources such as the Colab environment. Additionally, loading document metadata (titles and first sentences) from a separate CSV file significantly improved the readability and usability of the results.
+
+Future work will focus on optimizing embedding computations further, enhancing retrieval speed, and integrating more sophisticated query processing mechanisms to improve search accuracy and user experience.
+
+\end{document}
+
